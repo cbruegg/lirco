@@ -212,7 +212,7 @@ class LircClientImpl implements LircClient {
     const result = await this.send(requestedCommand);
     console.log(`Got answer '${result}'`);
     const regexResult = commandRegex.exec(result);
-    console.log(`Parsed answer into ${regexResult}`);
+    console.log('Parsed answer!');
     if (regexResult !== null && regexResult.groups !== undefined) {
       const {command, status, count, data} = regexResult.groups;
       if (command !== requestedCommand) {
