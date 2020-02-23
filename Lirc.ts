@@ -18,27 +18,25 @@ export async function connectLirc(
   host: string,
   port: number,
 ): Promise<LircClient> {
-  try {
-    const tcpClient = await connectTcp(host, port, timeoutMs);
-    return new LircClientImpl(tcpClient);
-  } catch (e) {
-    if (e === TcpError.Generic) {
-      throw Error.TcpError;
-    } else {
-      throw e;
+  return new RobustLircClient(async () => {
+    try {
+      const tcpClient = await connectTcp(host, port);
+      return new LircClientImpl(tcpClient);
+    } catch (e) {
+      if (e === TcpError.Generic) {
+        throw Error.TcpError;
+      } else {
+        throw e;
+      }
     }
-  }
+  });
 }
 
 enum TcpError {
   Generic = 'Generic',
 }
 
-function connectTcp(
-  host: string,
-  port: number,
-  timeoutMs: number,
-): Promise<TcpSocket> {
+function connectTcp(host: string, port: number): Promise<TcpSocket> {
   return new Promise<TcpSocket>(async (resolve, reject) => {
     let client: TcpSocket;
     client = TcpSocketLib.createConnection(
@@ -91,7 +89,85 @@ END
  */
 const commandRegex = /BEGIN\n(?<command>.*?)\n(?<status>SUCCESS|ERROR)\n(DATA\n(?<count>[0-9]+)\n(?<data>(.*\n|.*)*?)\n)?END/m;
 
-// TODO Create robust wrapper with retry / reconnect logic
+class RobustLircClient implements LircClient {
+  private readonly clientFactory: () => Promise<LircClient>;
+  private readonly mutex: Mutex = new Mutex();
+  private currentClient: LircClient | null = null;
+
+  constructor(clientFactory: () => Promise<LircClient>) {
+    this.clientFactory = clientFactory;
+  }
+
+  private async obtainClient(): Promise<LircClient> {
+    return await this.mutex.runExclusive(async () => {
+      if (this.currentClient == null) {
+        this.currentClient = await this.clientFactory();
+      }
+
+      return this.currentClient;
+    });
+  }
+
+  private killCurrentClient(): void {
+    this.currentClient = null;
+  }
+
+  private async retried<T>(
+    f: () => T,
+    maxRetries: number = 5,
+    startDelayMs: number = 100,
+  ): Promise<T> {
+    let lastErr: any;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return f();
+      } catch (e) {
+        if (e === Error.CommandTimeout || e === Error.TcpError) {
+          this.killCurrentClient();
+        }
+
+        lastErr = e;
+        await sleep(startDelayMs);
+        startDelayMs *= 2;
+      }
+    }
+    throw lastErr;
+  }
+
+  async list(): Promise<RemoteId[]> {
+    return await this.retried(async () => {
+      return (await this.obtainClient()).list();
+    });
+  }
+
+  async listButtons(remoteId: string): Promise<ButtonId[]> {
+    return await this.retried(async () => {
+      return (await this.obtainClient()).listButtons(remoteId);
+    });
+  }
+
+  async sendOnce(
+    remoteId: string,
+    buttonId: string,
+    repeats?: number,
+  ): Promise<void> {
+    return await this.retried(async () => {
+      return (await this.obtainClient()).sendOnce(remoteId, buttonId, repeats);
+    });
+  }
+
+  async sendStart(remoteId: string, buttonId: string): Promise<void> {
+    return await this.retried(async () => {
+      return (await this.obtainClient()).sendStart(remoteId, buttonId);
+    });
+  }
+
+  async sendStop(remoteId: string, buttonId: string): Promise<void> {
+    return await this.retried(async () => {
+      return (await this.obtainClient()).sendStop(remoteId, buttonId);
+    });
+  }
+}
 
 class LircClientImpl implements LircClient {
   private tcpClient: TcpSocket;
