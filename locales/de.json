@@ -1,0 +1,16 @@
+{
+  "component": {
+    "remote": {
+      "buttonInvokeFailed": "Knopfdruck wurde nicht erfolgreich gesendet!"
+    },
+    "remoteList": {
+      "remotes": "Fernbedienungen"
+    }
+  },
+  "general": {
+    "back": "Zurück",
+    "title": "Lirco",
+    "loadingFailed": "Laden fehlgeschlagen!",
+    "retry": "Wiederholen"
+  }
+}

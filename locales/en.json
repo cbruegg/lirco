@@ -1,0 +1,16 @@
+{
+  "component": {
+    "remote": {
+      "buttonInvokeFailed": "Failed to send button press!"
+    },
+    "remoteList": {
+      "remotes": "Remotes"
+    }
+  },
+  "general": {
+    "back": "Back",
+    "title": "Lirco",
+    "loadingFailed": "Failed to load!",
+    "retry": "Retry"
+  }
+}
