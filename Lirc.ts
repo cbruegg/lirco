@@ -3,8 +3,6 @@ import {sleep} from './utils';
 import {types} from 'util';
 import {Mutex} from 'async-mutex';
 
-// TODO Close methods
-
 export enum Error {
   CommandTimeout = 'CommandTimeout',
   TcpError = 'TcpError',
