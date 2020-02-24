@@ -3,7 +3,6 @@ import React from 'react';
 import {Button, FlatList, StyleSheet, Text, View} from 'react-native';
 import {strings} from './i18n';
 import Spinner from 'react-native-spinkit';
-import {sleep} from './utils';
 import SimpleToast from 'react-native-simple-toast';
 
 export type RemoteComponentProps = {

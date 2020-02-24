@@ -3,6 +3,8 @@ import {sleep} from './utils';
 import {types} from 'util';
 import {Mutex} from 'async-mutex';
 
+// TODO Close methods
+
 export enum Error {
   CommandTimeout = 'CommandTimeout',
   TcpError = 'TcpError',
@@ -75,6 +77,7 @@ export interface LircClient {
   ): Promise<void>;
   sendStart(remoteId: RemoteId, buttonId: ButtonId): Promise<void>;
   sendStop(remoteId: RemoteId, buttonId: ButtonId): Promise<void>;
+  close(): void;
 }
 
 /**
@@ -108,7 +111,15 @@ class RobustLircClient implements LircClient {
     });
   }
 
+  close() {
+    this.killCurrentClient();
+  }
+
   private killCurrentClient(): void {
+    try {
+      this.currentClient?.close();
+    } catch (ignoredError) {
+    }
     this.currentClient = null;
   }
 
@@ -174,6 +185,10 @@ class LircClientImpl implements LircClient {
   private mutex = new Mutex();
   constructor(tcpClient: TcpSocket) {
     this.tcpClient = tcpClient;
+  }
+
+  close() {
+    this.tcpClient.destroy();
   }
 
   async list(): Promise<RemoteId[]> {

@@ -5,12 +5,25 @@
     },
     "remoteList": {
       "remotes": "Fernbedienungen"
+    },
+    "settings": {
+      "settings": "Einstellungen",
+      "host": "Host",
+      "port": "Port",
+      "verify": "Überprüfen",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "verifyFail": "Verbinden fehlgeschlagen!",
+      "verifySuccess": "Verbinden war erfolgreich!",
+      "verifying": "Überprüfe Verbindung…"
     }
   },
   "general": {
     "back": "Zurück",
     "title": "Lirco",
     "loadingFailed": "Laden fehlgeschlagen!",
-    "retry": "Wiederholen"
+    "retry": "Wiederholen",
+    "connecting": "Verbindung wird hergestellt…",
+    "connectionFailed": "Verbinden fehlgeschlagen!"
   }
 }

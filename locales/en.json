@@ -5,12 +5,25 @@
     },
     "remoteList": {
       "remotes": "Remotes"
+    },
+    "settings": {
+      "settings": "Settings",
+      "host": "Host",
+      "port": "Port",
+      "verify": "Verify",
+      "save": "Save",
+      "cancel": "Cancel",
+      "verifyFail": "Could not connect!",
+      "verifySuccess": "Connection successful!",
+      "verifying": "Verifying…"
     }
   },
   "general": {
     "back": "Back",
     "title": "Lirco",
     "loadingFailed": "Failed to load!",
-    "retry": "Retry"
+    "retry": "Retry",
+    "connecting": "Connecting…",
+    "connectionFailed": "Could not connect!"
   }
 }
