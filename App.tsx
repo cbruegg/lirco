@@ -56,6 +56,13 @@ class App extends React.Component<AppProperties, AppState> {
     const settings = this.state.settings;
     if (settings !== null) {
       try {
+        // First close potentially existing instance
+        const lirc = this.state.lirc;
+        if (lirc !== null) {
+          lirc.close();
+        }
+      } catch (ignoredError) {}
+      try {
         const lirc = await connectLirc(settings.host, settings.port);
         this.setState({
           lirc: lirc,
