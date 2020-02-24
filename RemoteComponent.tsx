@@ -1,6 +1,13 @@
 import {ButtonId, LircClient, RemoteId} from './Lirc';
 import React from 'react';
-import {Button, FlatList, StyleSheet, Text, View} from 'react-native';
+import {
+  Button,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {strings} from './i18n';
 import Spinner from 'react-native-spinkit';
 import SimpleToast from 'react-native-simple-toast';
@@ -22,10 +29,14 @@ enum LoadingState {
   Failed = 'Failed',
 }
 
+const holdRepeats = 10;
+
 export class RemoteComponent extends React.Component<
   RemoteComponentProps,
   RemoteComponentState
 > {
+  private holding: boolean = false;
+
   constructor(props: RemoteComponentProps) {
     super(props);
     this.state = {
@@ -69,6 +80,25 @@ export class RemoteComponent extends React.Component<
     }
   }
 
+  private async startHold(buttonId: ButtonId) {
+    this.holding = true;
+    while (this.holding) {
+      try {
+        await this.props.lirc.sendOnce(
+          this.props.remoteId,
+          buttonId,
+          holdRepeats,
+        );
+      } catch (e) {
+        console.log(`Failed to repeatedly send button ${buttonId}, error ${e}`);
+      }
+    }
+  }
+
+  private async stopHold() {
+    this.holding = false;
+  }
+
   render() {
     const buttonIds = this.state.buttonIds;
 
@@ -87,11 +117,13 @@ export class RemoteComponent extends React.Component<
             numColumns={2}
             data={buttonIds}
             renderItem={({item}) => (
-              <View style={styles.remoteButton}>
-                <Button
-                  title={'\n' + item + '\n'}
-                  onPress={() => this.invokeButton(item)}
-                />
+              <View style={styles.remoteButtonContainer}>
+                <TouchableOpacity
+                  onLongPress={() => this.startHold(item)}
+                  onPressOut={() => this.stopHold()}
+                  onPress={() => this.invokeButton(item)}>
+                  <Text style={styles.remoteButton}>{'\n' + item + '\n'}</Text>
+                </TouchableOpacity>
               </View>
             )}
             keyExtractor={item => item}
@@ -135,10 +167,15 @@ const styles = StyleSheet.create({
     fontSize: 30,
     margin: 10,
   },
-  remoteButton: {
+  remoteButtonContainer: {
     margin: 5,
     flex: 1,
     flexDirection: 'column',
+  },
+  remoteButton: {
+    backgroundColor: 'rgb(29,202,246)',
+    color: 'white',
+    textAlign: 'center',
   },
   backButton: {
     justifyContent: 'flex-end',
