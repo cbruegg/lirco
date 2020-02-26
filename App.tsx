@@ -174,7 +174,7 @@ class App extends React.Component<AppProperties, AppState> {
 
     return (
       <>
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle="dark-content" />
         <SafeAreaView style={styles.body}>
           <Text style={styles.title}>{strings('general.title')}</Text>
           {body}
