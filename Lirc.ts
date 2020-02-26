@@ -3,7 +3,7 @@ import {sleep} from './utils';
 import {types} from 'util';
 import {Mutex} from 'async-mutex';
 
-export enum Error {
+export enum ErrorCode {
   CommandTimeout = 'CommandTimeout',
   TcpError = 'TcpError',
   InvalidData = 'InvalidData',
@@ -23,8 +23,8 @@ export async function connectLirc(
       const tcpClient = await connectTcp(host, port);
       return new LircClientImpl(tcpClient);
     } catch (e) {
-      if (e === TcpError.Generic) {
-        throw Error.TcpError;
+      if (e.message === TcpError.Generic) {
+        throw new Error(ErrorCode.TcpError);
       } else {
         throw e;
       }
@@ -49,16 +49,16 @@ function connectTcp(host: string, port: number): Promise<TcpSocket> {
         if (address !== undefined && address !== null && client !== undefined) {
           resolve(client);
         } else {
-          reject(TcpError.Generic);
+          reject(new Error(TcpError.Generic));
         }
       },
     );
     client.on('error', _ => {
-      reject(TcpError.Generic);
+      reject(new Error(TcpError.Generic));
     });
     await sleep(timeoutMs);
     if (typeof client.address() !== 'string') {
-      reject(TcpError.Generic);
+      reject(new Error(TcpError.Generic));
     }
   });
 }
@@ -122,16 +122,17 @@ class RobustLircClient implements LircClient {
   }
 
   private async retried<T>(
-    f: () => T,
-    maxRetries: number = 5,
+    f: () => Promise<T>,
+    maxRetries: number = 7,
     startDelayMs: number = 100,
   ): Promise<T> {
     let lastErr: any;
     for (let i = 0; i < maxRetries; i++) {
       try {
-        return f();
+        return await f();
       } catch (e) {
-        if (e === Error.CommandTimeout || e === Error.TcpError) {
+        console.log("Caught exception, retrying!");
+        if (e.message === ErrorCode.CommandTimeout || e.message === ErrorCode.TcpError) {
           this.killCurrentClient();
         }
 
@@ -198,7 +199,7 @@ class LircClientImpl implements LircClient {
     return lines.map(line => {
       const splitLine = line.split(' ');
       if (splitLine.length < 2) {
-        throw Error.InvalidData;
+        throw new Error(ErrorCode.InvalidData);
       }
       return splitLine[1];
     });
@@ -229,10 +230,10 @@ class LircClientImpl implements LircClient {
     if (regexResult !== null && regexResult.groups !== undefined) {
       const {command, status, count, data} = regexResult.groups;
       if (command !== requestedCommand) {
-        throw Error.CommandResultMismatch;
+        throw new Error(ErrorCode.CommandResultMismatch);
       }
       if (status !== 'SUCCESS') {
-        throw Error.NoSuccess;
+        throw new Error(ErrorCode.NoSuccess);
       }
 
       if (data === undefined) {
@@ -240,13 +241,13 @@ class LircClientImpl implements LircClient {
       } else {
         const lines = data.split('\n');
         if (lines.length !== Number(count)) {
-          throw Error.CountMismatch;
+          throw new Error(ErrorCode.CountMismatch);
         }
 
         return lines;
       }
     } else {
-      throw Error.InvalidData;
+      throw new Error(ErrorCode.InvalidData);
     }
   }
 
@@ -255,7 +256,7 @@ class LircClientImpl implements LircClient {
       const release = await this.mutex.acquire();
       try {
         this.tcpClient.on('error', _ => {
-          reject(Error.TcpError);
+          reject(new Error(ErrorCode.TcpError));
         });
 
         let result = '';
@@ -263,7 +264,7 @@ class LircClientImpl implements LircClient {
         this.tcpClient.on('data', data => {
           if (!types.isUint8Array(data)) {
             receivedInvalidData = true;
-            reject(Error.InvalidData);
+            reject(new Error(ErrorCode.InvalidData));
             return;
           } else if (receivedInvalidData) {
             return;
@@ -284,9 +285,14 @@ class LircClientImpl implements LircClient {
           }
         });
 
-        this.tcpClient.write(command + '\n', 'utf-8');
+        try {
+          this.tcpClient.write(command + '\n', 'utf-8');
+        } catch (e) {
+          reject(new Error(ErrorCode.TcpError));
+        }
         await sleep(timeoutMs);
-        reject(Error.CommandTimeout);
+        console.log("Rejecting due to timeout!");
+        reject(new Error(ErrorCode.CommandTimeout));
       } finally {
         release();
       }
